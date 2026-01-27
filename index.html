@@ -207,7 +207,7 @@ const firebaseConfig = {
   apiKey: "AIzaSyC9O9fG49PlZMHifUYgd8TRWqdI9azXNR4",
   authDomain: "leer-melden-app.firebaseapp.com",
   projectId: "leer-melden-app",
-  storageBucket: "leer-melden-app.firebasestorage.app",
+  storageBucket: "leer-melden-app.appspot.com",
   messagingSenderId: "971276793960",
   appId: "1:971276793960:web:412ad8401fee0c513ba3dd"
 };
@@ -617,7 +617,23 @@ function setFbStatus(ok){
   $("#fbDot").className = "dot " + (ok? "good":"bad");
   $("#fbText").textContent = ok? "Firebase: verbunden":"Firebase: nicht verbunden";
 }
-async function connectFirebase(){ /* Firebase already initialized */ }
+async function connectFirebase(){
+  try{
+    // Initialize ONLY once
+    if(!state.app){
+      state.app = initializeApp(firebaseConfig);
+    }
+    if(!state.db){
+      state.db = getFirestore(state.app);
+    }
+    setFbStatus(true);
+    attachFirestoreListeners();
+  }catch(err){
+    console.error(err);
+    setFbStatus(false);
+    toast(t("fb_error_title"), t("fb_error_body"));
+  }
+}
 }
 function attachFirestoreListeners(){
   // Produkte
