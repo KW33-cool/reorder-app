@@ -204,10 +204,10 @@ import { getFirestore, collection, doc, addDoc, setDoc, getDoc, getDocs, deleteD
 
 /** ✅ Firebase config ist hier schon drin (kein Kopieren nötig) */
 const firebaseConfig = {
-  apiKey: "AIzaSyC9O9fG49PlZMHifUYgd8TRWqdI9azXNR4",
+  apiKey: "AIzaSyC9O9fG49PlZMHiFUYgd8TRWqdI9azXNR4",
   authDomain: "leer-melden-app.firebaseapp.com",
   projectId: "leer-melden-app",
-  storageBucket: "leer-melden-app.appspot.com",
+  storageBucket: "leer-melden-app.firebasestorage.app",
   messagingSenderId: "971276793960",
   appId: "1:971276793960:web:412ad8401fee0c513ba3dd"
 };
@@ -619,13 +619,8 @@ function setFbStatus(ok){
 }
 async function connectFirebase(){
   try{
-    // Initialize ONLY once
-    if(!state.app){
-      state.app = initializeApp(firebaseConfig);
-    }
-    if(!state.db){
-      state.db = getFirestore(state.app);
-    }
+    state.app = initializeApp(firebaseConfig);
+    state.db  = getFirestore(state.app);
     setFbStatus(true);
     attachFirestoreListeners();
   }catch(err){
@@ -633,7 +628,6 @@ async function connectFirebase(){
     setFbStatus(false);
     toast(t("fb_error_title"), t("fb_error_body"));
   }
-}
 }
 function attachFirestoreListeners(){
   // Produkte
