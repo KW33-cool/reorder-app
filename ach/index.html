@@ -1,0 +1,1414 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Nachbestell‑App</title>
+
+<!-- QR-Scanner (Kamera) -->
+<script src="https://unpkg.com/html5-qrcode@2.3.10/html5-qrcode.min.js"></script>
+
+<style>
+:root{
+  --bg1:#0a1b33;
+  --bg2:#0e3a3a;
+  --card: rgba(255,255,255,.08);
+  --card2: rgba(255,255,255,.12);
+  --border: rgba(255,255,255,.16);
+  --text: rgba(255,255,255,.92);
+  --muted: rgba(255,255,255,.68);
+  --accent:#4f86ff;
+
+  --glassOn: 1;
+  --glassBlur: 22px;
+  --bgIntensity: .95;
+}
+
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;
+  color:var(--text);
+  font: 17px/1.35 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial;
+  background:
+    radial-gradient(1000px 700px at 20% 10%, rgba(79,134,255,.55), transparent 60%),
+    radial-gradient(900px 650px at 80% 20%, rgba(0,255,210,.25), transparent 60%),
+    radial-gradient(1200px 900px at 40% 80%, rgba(255,140,0,.18), transparent 55%),
+    linear-gradient(135deg, color-mix(in srgb, var(--bg1) 100%, black calc((1 - var(--bgIntensity))*100%)),
+                          color-mix(in srgb, var(--bg2) 100%, black calc((1 - var(--bgIntensity))*100%)));
+  overflow-x:hidden;
+}
+
+a{color:var(--accent); text-decoration:none}
+a:hover{text-decoration:underline}
+button,input,select,textarea{font:inherit}
+button{cursor:pointer}
+small{color:var(--muted)}
+
+.topbar{
+  position:sticky; top:0; z-index:50;
+  padding:16px 22px;
+  background: rgba(0,0,0,.18);
+  border-bottom: 1px solid rgba(255,255,255,.08);
+  backdrop-filter: blur(14px);
+}
+.row{display:flex; align-items:center; justify-content:space-between; gap:14px}
+.brand{display:flex; align-items:center; gap:12px}
+.logo{
+  width:44px; height:44px; border-radius:14px;
+  background: linear-gradient(135deg, rgba(255,255,255,.28), rgba(255,255,255,.08));
+  border:1px solid rgba(255,255,255,.20);
+  box-shadow: 0 10px 30px rgba(0,0,0,.25);
+}
+h1{margin:0; font-size:18px; letter-spacing:.2px}
+.pill{
+  display:inline-flex; align-items:center; gap:10px;
+  padding:9px 12px;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,.14);
+  background: rgba(255,255,255,.06);
+  backdrop-filter: blur(10px);
+}
+.dot{width:10px; height:10px; border-radius:50%}
+.dot.bad{background:#ff5b5b}
+.dot.good{background:#35e070}
+
+.wrap{max-width: 1400px; margin: 0 auto; padding: 22px 22px 56px}
+.grid{
+  display:grid;
+  grid-template-columns: 1.05fr 1.25fr;
+  gap:22px;
+}
+@media (max-width: 980px){
+  .grid{grid-template-columns:1fr}
+}
+.card{
+  border-radius: 26px;
+  border:1px solid var(--border);
+  background: var(--card);
+  padding: 22px;
+  box-shadow: 0 18px 55px rgba(0,0,0,.25);
+  backdrop-filter: blur(var(--glassBlurEff));
+}
+.card.soft{background: var(--card2)}
+h2{margin:0 0 10px; font-size:18px}
+.hr{height:1px; background:rgba(255,255,255,.10); margin:16px 0}
+.kbtn{display:flex; gap:12px; flex-wrap:wrap}
+.btn{
+  border:1px solid rgba(255,255,255,.14);
+  background: rgba(255,255,255,.08);
+  color:var(--text);
+  padding:11px 14px;
+  border-radius: 14px;
+}
+.btn.primary{
+  background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 75%, #ffffff 10%), color-mix(in srgb, var(--accent) 55%, #000000 0%));
+  border-color: rgba(255,255,255,.20);
+}
+.btn.danger{
+  background: rgba(255,91,91,.18);
+  border-color: rgba(255,91,91,.35);
+}
+.btn:disabled{opacity:.45; cursor:not-allowed}
+.muted{color:var(--muted)}
+.mini{font-size:13px}
+.tag{
+  display:inline-flex; align-items:center; gap:8px;
+  padding:8px 10px; border-radius:12px;
+  background: rgba(255,255,255,.06);
+  border:1px solid rgba(255,255,255,.12);
+}
+input,select,textarea{
+  width:100%;
+  background: rgba(0,0,0,.22);
+  color:var(--text);
+  border:1px solid rgba(255,255,255,.14);
+  border-radius: 14px;
+  padding: 10px 12px;
+}
+textarea{min-height:110px; resize:vertical}
+.field{display:grid; gap:8px; margin:10px 0}
+.cols{display:grid; grid-template-columns: 1fr 1fr; gap:12px}
+@media (max-width: 680px){ .cols{grid-template-columns:1fr} }
+
+.table{
+  width:100%;
+  border-collapse: collapse;
+  margin-top:10px;
+}
+.table th,.table td{
+  text-align:left;
+  padding:10px 10px;
+  border-bottom:1px solid rgba(255,255,255,.10);
+  vertical-align:top;
+}
+.table th{color:var(--muted); font-weight:600; font-size:13px}
+.actions{display:flex; gap:8px; flex-wrap:wrap}
+
+.hidden{display:none !important}
+
+.modal{
+  position:fixed; inset:0; z-index:200;
+  display:flex; align-items:center; justify-content:center;
+  background: rgba(0,0,0,.55);
+  padding: 18px;
+}
+.modal .box{
+  width:min(720px, 96vw);
+  border-radius: 24px;
+  border:1px solid rgba(255,255,255,.20);
+  background: rgba(20,28,40,.75);
+  padding: 18px;
+  box-shadow: 0 25px 90px rgba(0,0,0,.55);
+  backdrop-filter: blur(18px);
+}
+.modal .top{display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:10px}
+.modal img{max-width: 100%; border-radius: 18px; border:1px solid rgba(255,255,255,.14); background:rgba(0,0,0,.25)}
+.badge{
+  display:inline-flex; align-items:center; gap:8px;
+  padding:6px 10px; border-radius:999px;
+  border:1px solid rgba(255,255,255,.16);
+  background: rgba(255,255,255,.06);
+  font-size:13px;
+}
+
+.sliderRow{display:grid; grid-template-columns: 140px 1fr; align-items:center; gap:12px; margin:10px 0}
+input[type="range"]{padding:0; height: 30px; background: transparent; border:none}
+input[type="color"]{height:42px; padding:6px; border-radius: 14px}
+
+.sel{
+  appearance:none;
+  -webkit-appearance:none;
+  background: rgba(255,255,255,.10);
+  color: var(--text);
+  border:1px solid rgba(255,255,255,.18);
+  border-radius: 12px;
+  padding: 8px 10px;
+  font: inherit;
+}
+.topbar .row{flex-wrap:wrap; gap:10px}
+.topbar .row .brand{min-width:240px}
+@media (max-width:520px){
+  .topbar .row{align-items:flex-start}
+  .topbar .row .brand h1{font-size:18px}
+  .topbar .row .brand small{font-size:12px}
+  #btnHome{padding:10px 12px}
+  .pill{max-width:100%}
+}
+
+</style>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+import { getFirestore, collection, doc, addDoc, setDoc, getDoc, getDocs, deleteDoc, onSnapshot, query, orderBy, serverTimestamp, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+
+/** ✅ Firebase config ist hier schon drin (kein Kopieren nötig) */
+const firebaseConfig = {
+  apiKey: "AIzaSyC9O9fG49PlZMHiFUYgd8TRWqdI9azXNR4",
+  authDomain: "leer-melden-app.firebaseapp.com",
+  projectId: "leer-melden-app",
+  storageBucket: "leer-melden-app.firebasestorage.app",
+  messagingSenderId: "971276793960",
+  appId: "1:971276793960:web:412ad8401fee0c513ba3dd"
+};
+
+// ---------- Helpers ----------
+const $ = (s, el=document)=> el.querySelector(s);
+const $$ = (s, el=document)=> Array.from(el.querySelectorAll(s));
+const ls = {
+  get:(k, d=null)=>{ try{ const v=localStorage.getItem(k); return v? JSON.parse(v): d; }catch{ return d; } },
+  set:(k, v)=>{ try{ localStorage.setItem(k, JSON.stringify(v)); }catch{} },
+  del:(k)=>{ try{ localStorage.removeItem(k); }catch{} },
+};
+
+const state = {
+  connected: false,
+  app: null,
+  db: null,
+  products: null,   // id -> {name, unit, code, link}
+  reports: null,    // id -> {...}
+  view: "home",
+  adminAuthed: false,
+  html5: null,
+  lang: "de"
+};
+state.products = new Map();
+state.reports  = new Map();
+
+
+// ---------- Language / i18n ----------
+const LANG_KEY = "nb_lang_v1";
+
+const STR = {
+  de: {
+    app_title: "Nachbestell‑App",
+    app_subtitle: "Admin & Mitarbeiter in einer App",
+    language: "Sprache",
+    start: "🏠 Start",
+    selection_title: "Auswahl",
+    selection_p: "Wähle Admin oder Mitarbeiter. Admin ist per PIN geschützt.",
+    worker_btn: "🧑‍🔧 Mitarbeiter",
+    admin_btn: "Admin",
+    design_title: "Design",
+    design_p: "Hier stellst du Akzentfarbe & „Liquid Glass“ ein. Änderungen gelten erst nach Bestätigen.",
+    accent: "Akzentfarbe",
+    liquid: "Liquid Glass",
+    blur_strength: "Unschärfe",
+    bg_intensity: "Hintergrund‑Intensität",
+    apply: "✅ Bestätigen",
+    reset: "Zurücksetzen",
+    admin_login_title: "Admin‑Login",
+    pin: "PIN",
+    remember: "Eingeloggt bleiben",
+    login: "Anmelden",
+    cancel: "Abbrechen",
+    admin_title: "Admin",
+    logout: "Abmelden",
+    product_create: "Produkt anlegen",
+    name: "Name",
+    unit_opt: "Einheit (optional)",
+    code_opt: "QR‑Code (optional) – leer lassen → wird automatisch erzeugt",
+    link_opt: "Bestell‑Link (optional)",
+    save: "✅ Speichern",
+    products_title: "Produkte",
+    reports_title: "Meldungen",
+    product: "Produkt",
+    quantity: "Menge",
+    status: "Status",
+    actions: "Aktionen",
+    show_qr: "QR anzeigen",
+    copy_code: "Code kopieren",
+    open_link: "Link",
+    delete: "Löschen",
+    report_delete: "Meldung löschen",
+    ordered: "bestellt",
+    delivered: "geliefert",
+    ordered_at: "Bestellt",
+    delivered_at: "Geliefert",
+    worker_title: "Mitarbeiter",
+    worker_p: "Scanne den QR‑Code (Kamera) oder wähle das Produkt manuell und melde die Menge.",
+    camera_scan: "📷 Kamera‑Scan",
+    scan_start: "Scan starten",
+    stop: "Stop",
+    safari_block: "Wenn Safari die Kamera blockt: unten Code manuell eingeben.",
+    manual_code: "Manueller Code (falls kein Kamera‑Scan möglich)",
+    check_code: "Code prüfen",
+    choose_product: "– Produkt wählen –",
+    empty_report: "✅ Leer melden",
+    back: "Zurück",
+    worker_reports_title: "Aktuelle Meldungen",
+    worker_reports_hint: "Du siehst den Status. „Bestellt“ setzt nur Admin. Du kannst „Geliefert“ bestätigen – dann verschwindet die Meldung hier.",
+    action: "Aktion",
+    confirm_delivered: "Geliefert bestätigen",
+    no_reports: "${escapeHtml(t("no_reports"))}",
+    no_products: "${escapeHtml(t("no_products"))}",
+    code_not_found: "Produkt nicht gefunden",
+    reported_ok_title: "✅ Gemeldet",
+    reported_ok_body: "Meldung wurde gespeichert.",
+    fb_connected: "Firebase: verbunden",
+    fb_not_connected: "Firebase: nicht verbunden",
+    fb_error_title: "⚠️ Firebase Fehler",
+    fb_error_body: "Verbindung nicht möglich. Bitte prüfen: Projekt/Rules/Internet.",
+    wrong_pin_title: "❌ Falsche PIN",
+    wrong_pin_body: "Bitte erneut versuchen.",
+  },
+  en: {
+    app_title: "Reorder App",
+    app_subtitle: "Admin & staff in one app",
+    language: "Language",
+    start: "🏠 Home",
+    selection_title: "Choose",
+    selection_p: "Choose Admin or Staff. Admin is protected by a PIN.",
+    worker_btn: "🧑‍🔧 Staff",
+    admin_btn: "Admin",
+    design_title: "Design",
+    design_p: "Set accent color & “Liquid Glass”. Changes apply only after Confirm.",
+    accent: "Accent color",
+    liquid: "Liquid Glass",
+    blur_strength: "Blur",
+    bg_intensity: "Background intensity",
+    apply: "✅ Confirm",
+    reset: "Reset",
+    admin_login_title: "Admin login",
+    pin: "PIN",
+    remember: "Stay logged in",
+    login: "Sign in",
+    cancel: "Cancel",
+    admin_title: "Admin",
+    logout: "Sign out",
+    product_create: "Create product",
+    name: "Name",
+    unit_opt: "Unit (optional)",
+    code_opt: "QR code (optional) – leave empty → auto generated",
+    link_opt: "Order link (optional)",
+    save: "✅ Save",
+    products_title: "Products",
+    reports_title: "Reports",
+    product: "Product",
+    quantity: "Qty",
+    status: "Status",
+    actions: "Actions",
+    show_qr: "Show QR",
+    copy_code: "Copy code",
+    open_link: "Link",
+    delete: "Delete",
+    report_delete: "Delete report",
+    ordered: "ordered",
+    delivered: "delivered",
+    ordered_at: "Ordered",
+    delivered_at: "Delivered",
+    worker_title: "Staff",
+    worker_p: "Scan the QR code (camera) or pick the product manually and report the quantity.",
+    camera_scan: "📷 Camera scan",
+    scan_start: "Start scan",
+    stop: "Stop",
+    safari_block: "If Safari blocks the camera: enter the code manually below.",
+    manual_code: "Manual code (if camera scan is not possible)",
+    check_code: "Check code",
+    choose_product: "– Choose product –",
+    empty_report: "✅ Report empty",
+    back: "Back",
+    worker_reports_title: "Current reports",
+    worker_reports_hint: "You can see the status. Only Admin can set “ordered”. You can confirm “delivered” — then the report disappears here.",
+    action: "Action",
+    confirm_delivered: "Confirm delivered",
+    no_reports: "No reports yet.",
+    no_products: "No products yet.",
+    code_not_found: "Product not found",
+    reported_ok_title: "✅ Reported",
+    reported_ok_body: "Saved successfully.",
+    fb_connected: "Firebase: connected",
+    fb_not_connected: "Firebase: not connected",
+    fb_error_title: "⚠️ Firebase error",
+    fb_error_body: "Cannot connect. Please check: project/rules/internet.",
+    wrong_pin_title: "❌ Wrong PIN",
+    wrong_pin_body: "Please try again.",
+  },
+  el: {
+    app_title: "Εφαρμογή Παραγγελίας",
+    app_subtitle: "Admin & προσωπικό σε μία εφαρμογή",
+    language: "Γλώσσα",
+    start: "🏠 Αρχική",
+    selection_title: "Επιλογή",
+    selection_p: "Διάλεξε Admin ή Προσωπικό. Το Admin προστατεύεται με PIN.",
+    worker_btn: "🧑‍🔧 Προσωπικό",
+    admin_btn: "Admin",
+    design_title: "Σχεδιασμός",
+    design_p: "Ρύθμισε χρώμα & “Liquid Glass”. Οι αλλαγές εφαρμόζονται μόνο μετά το Επιβεβαίωση.",
+    accent: "Χρώμα έμφασης",
+    liquid: "Liquid Glass",
+    blur_strength: "Θόλωμα",
+    bg_intensity: "Ένταση φόντου",
+    apply: "✅ Επιβεβαίωση",
+    reset: "Επαναφορά",
+    admin_login_title: "Σύνδεση Admin",
+    pin: "PIN",
+    remember: "Παραμονή συνδεδεμένος",
+    login: "Σύνδεση",
+    cancel: "Ακύρωση",
+    admin_title: "Admin",
+    logout: "Αποσύνδεση",
+    product_create: "Νέο προϊόν",
+    name: "Όνομα",
+    unit_opt: "Μονάδα (προαιρετικό)",
+    code_opt: "QR code (προαιρετικό) – άφησέ το κενό → αυτόματη δημιουργία",
+    link_opt: "Σύνδεσμος παραγγελίας (προαιρετικό)",
+    save: "✅ Αποθήκευση",
+    products_title: "Προϊόντα",
+    reports_title: "Αναφορές",
+    product: "Προϊόν",
+    quantity: "Ποσότητα",
+    status: "Κατάσταση",
+    actions: "Ενέργειες",
+    show_qr: "Εμφάνιση QR",
+    copy_code: "Αντιγραφή κωδικού",
+    open_link: "Σύνδεσμος",
+    delete: "Διαγραφή",
+    report_delete: "Διαγραφή αναφοράς",
+    ordered: "παραγγέλθηκε",
+    delivered: "παραδόθηκε",
+    ordered_at: "Παραγγέλθηκε",
+    delivered_at: "Παραδόθηκε",
+    worker_title: "Προσωπικό",
+    worker_p: "Σκάναρε το QR (κάμερα) ή διάλεξε χειροκίνητα προϊόν και δήλωσε την ποσότητα.",
+    camera_scan: "📷 Σκανάρισμα κάμερας",
+    scan_start: "Έναρξη σκαν",
+    stop: "Stop",
+    safari_block: "Αν το Safari μπλοκάρει την κάμερα: βάλε τον κωδικό χειροκίνητα παρακάτω.",
+    manual_code: "Χειροκίνητος κωδικός (αν δεν γίνεται σκαν)",
+    check_code: "Έλεγχος κωδικού",
+    choose_product: "– Επιλογή προϊόντος –",
+    empty_report: "✅ Δήλωση άδειο",
+    back: "Πίσω",
+    worker_reports_title: "Τρέχουσες αναφορές",
+    worker_reports_hint: "Βλέπεις την κατάσταση. Μόνο Admin βάζει “παραγγέλθηκε”. Μπορείς να επιβεβαιώσεις “παραδόθηκε” — μετά εξαφανίζεται εδώ.",
+    action: "Ενέργεια",
+    confirm_delivered: "Επιβεβαίωση παραδόθηκε",
+    no_reports: "Δεν υπάρχουν αναφορές ακόμη.",
+    no_products: "Δεν υπάρχουν προϊόντα ακόμη.",
+    code_not_found: "Το προϊόν δεν βρέθηκε",
+    reported_ok_title: "✅ Καταχωρήθηκε",
+    reported_ok_body: "Αποθηκεύτηκε.",
+    fb_connected: "Firebase: συνδεδεμένο",
+    fb_not_connected: "Firebase: μη συνδεδεμένο",
+    fb_error_title: "⚠️ Σφάλμα Firebase",
+    fb_error_body: "Δεν είναι δυνατή η σύνδεση. Έλεγξε: project/rules/internet.",
+    wrong_pin_title: "❌ Λάθος PIN",
+    wrong_pin_body: "Δοκίμασε ξανά.",
+  }
+};
+
+function t(key){
+  const L = state.lang || "de";
+  return (STR[L] && STR[L][key]) || (STR.de[key] || key);
+}
+function tStatus(st){
+  const s = (st || "open").toLowerCase();
+  if(s==="ordered") return t("ordered");
+  if(s==="delivered") return t("delivered");
+  return "open";
+}
+function applyLang(lang){
+  state.lang = lang || "de";
+  ls.set(LANG_KEY, state.lang);
+  document.documentElement.lang = state.lang;
+
+  // Topbar
+  const lblLang = document.getElementById("lblLang"); if(lblLang) lblLang.textContent = t("language");
+  const btnHome = document.getElementById("btnHome"); if(btnHome) btnHome.textContent = t("start");
+
+  // Brand
+  const h1 = document.querySelector(".brand h1"); if(h1) h1.textContent = t("app_title");
+  const sub = document.querySelector(".brand small"); if(sub) sub.textContent = t("app_subtitle");
+
+  // Home
+  const h2s = document.querySelectorAll("#view_home h2");
+  if(h2s && h2s[0]) h2s[0].textContent = t("selection_title");
+  const pSel = document.querySelector("#view_home p.muted"); if(pSel) pSel.textContent = t("selection_p");
+  document.querySelectorAll(".goWorker").forEach(b=> b.textContent = t("worker_btn"));
+  document.querySelectorAll(".goAdmin").forEach(b=> b.textContent = t("admin_btn"));
+  const h2design = document.querySelectorAll("#view_home h2")[1]; if(h2design) h2design.textContent = t("design_title");
+  const dp = document.querySelector('#view_home p.mini.muted'); if(dp) dp.textContent = t("design_p");
+  // Design labels + buttons
+  const labs = document.querySelectorAll('#view_home .field label.mini.muted');
+  if(labs && labs[0]) labs[0].textContent = t("accent");
+  if(labs && labs[1]) labs[1].textContent = t("liquid");
+  if(labs && labs[2]) labs[2].textContent = t("blur_strength");
+  if(labs && labs[3]) labs[3].textContent = t("bg_intensity");
+  const btnApply = document.getElementById("btnThemeApply"); if(btnApply) btnApply.textContent = t("apply");
+  const btnReset = document.getElementById("btnThemeReset"); if(btnReset) btnReset.textContent = t("reset");
+
+  // Admin login
+  const al = document.querySelector("#view_adminLogin h2"); if(al) al.textContent = t("admin_login_title");
+  const pinLab = document.querySelector('#view_adminLogin label.mini.muted'); if(pinLab) pinLab.textContent = t("pin");
+  const rem = document.querySelector('#view_adminLogin label[for="rememberAdmin"]'); if(rem) rem.textContent = t("remember");
+  const btnLogin = document.getElementById("btnPinLogin"); if(btnLogin) btnLogin.textContent = t("login");
+  const btnCancel = document.getElementById("btnPinCancel"); if(btnCancel) btnCancel.textContent = t("cancel");
+
+  // Admin
+  const at = document.querySelector('#view_admin h2'); if(at) at.textContent = t("admin_title");
+  const logout = document.getElementById("btnAdminLogout"); if(logout) logout.textContent = t("logout");
+  const pc = document.querySelector('#view_admin .card h2'); if(pc) pc.textContent = t("product_create");
+  const adminLabs = document.querySelectorAll('#view_admin .card .field label.mini.muted');
+  if(adminLabs && adminLabs[0]) adminLabs[0].textContent = t("name");
+  if(adminLabs && adminLabs[1]) adminLabs[1].textContent = t("unit_opt");
+  if(adminLabs && adminLabs[2]) adminLabs[2].textContent = t("code_opt");
+  if(adminLabs && adminLabs[3]) adminLabs[3].textContent = t("link_opt");
+  const btnSave = document.getElementById("btnSaveProduct"); if(btnSave) btnSave.textContent = t("save");
+
+  // Worker
+  const wt = document.querySelector('#view_worker h2'); if(wt) wt.textContent = t("worker_title");
+  const wp = document.querySelector('#view_worker p.muted'); if(wp) wp.textContent = t("worker_p");
+  const tag = document.querySelector('#view_worker .tag'); if(tag) tag.textContent = t("camera_scan");
+  const bs = document.getElementById("btnScanStart"); if(bs) bs.textContent = t("scan_start");
+  const bst = document.getElementById("btnScanStop"); if(bst) bst.textContent = t("stop");
+  const safari = document.querySelector('#scanArea .mini.muted'); if(safari) safari.textContent = t("safari_block");
+  const wlabs = document.querySelectorAll('#view_worker .cols .field label.mini.muted');
+  if(wlabs && wlabs[0]) wlabs[0].textContent = t("manual_code");
+  // btnCodeApply
+  const bca = document.getElementById("btnCodeApply"); if(bca) bca.textContent = t("check_code");
+  // Product/Qty labels are next two labels after scan card
+  const w2labs = document.querySelectorAll('#view_worker > .cols .field label.mini.muted');
+  if(w2labs && w2labs[0]) w2labs[0].textContent = t("product");
+  if(w2labs && w2labs[1]) w2labs[1].textContent = t("quantity");
+  const send = document.getElementById("btnWorkerSend"); if(send) send.textContent = t("empty_report");
+  const backBtn = document.querySelector('#view_worker button.btn:not(#btnScanStart):not(#btnScanStop):not(#btnCodeApply):not(#btnWorkerSend)'); if(backBtn) backBtn.textContent = t("back");
+  // Worker reports
+  const wrt = document.getElementById("workerReportsTitle"); if(wrt) wrt.textContent = t("worker_reports_title");
+  const wrh = document.getElementById("workerReportsHint"); if(wrh) wrh.textContent = t("worker_reports_hint");
+  const thWProd=document.getElementById("thWProd"); if(thWProd) thWProd.textContent = t("product");
+  const thWQty=document.getElementById("thWQty"); if(thWQty) thWQty.textContent = t("quantity");
+  const thWStatus=document.getElementById("thWStatus"); if(thWStatus) thWStatus.textContent = t("status");
+  const thWAction=document.getElementById("thWAction"); if(thWAction) thWAction.textContent = t("action");
+
+  // Placeholders
+  const mc = document.getElementById("manualCode"); if(mc) mc.placeholder = (state.lang==="el") ? "π.χ. NB-XXX-ABCDE ή MILCH-01" : (state.lang==="en" ? "e.g. NB-XXX-ABCDE or MILCH-01" : "z.B. NB-XXX-ABCDE oder MILCH-01");
+  const pn = document.getElementById("prodName"); if(pn) pn.placeholder = (state.lang==="en" ? "e.g. Milk" : state.lang==="el" ? "π.χ. Γάλα" : "z.B. Milch");
+  const pu = document.getElementById("prodUnit"); if(pu) pu.placeholder = (state.lang==="en" ? "e.g. 1L / pack" : state.lang==="el" ? "π.χ. 1L / συσκευασία" : "z.B. 1L / Packung");
+  const pcod = document.getElementById("prodCode"); if(pcod) pcod.placeholder = (state.lang==="en" ? "e.g. MILK-01" : state.lang==="el" ? "π.χ. MILK-01" : "z.B. MILCH-01");
+  const pl = document.getElementById("prodLink"); if(pl) pl.placeholder = (state.lang==="en" ? "e.g. https://… (supplier)" : state.lang==="el" ? "π.χ. https://… (προμηθευτής)" : "z.B. https://… (Shop / Lieferant)");
+}
+
+function initLang(){
+  const sel = document.getElementById("langSel");
+  const saved = ls.get(LANG_KEY, "de");
+  if(sel){
+    sel.value = saved;
+    sel.addEventListener("change", ()=>{ applyLang(sel.value); renderEverywhere(); });
+  }
+  applyLang(saved);
+}
+
+
+// ---------- Design settings ----------
+const THEME_KEY="nb_theme_v1";
+function applyTheme(t){
+  const theme = t || ls.get(THEME_KEY,{
+    accent:"#4f86ff",
+    glassOn:true,
+    glassBlur:22,
+    bgIntensity:0.95,
+  });
+  document.documentElement.style.setProperty("--accent", theme.accent);
+  document.body.classList.toggle("glass-off", !theme.glassOn);
+  const blur = theme.glassOn ? `${Number(theme.glassBlur||22)}px` : "0px";
+  document.documentElement.style.setProperty("--glassBlurEff", blur);
+  document.documentElement.style.setProperty("--glassBlur", `${Number(theme.glassBlur||22)}px`);
+  document.documentElement.style.setProperty("--bgIntensity", String(theme.bgIntensity ?? 0.95));
+  // UI
+  $("#accentColor").value = theme.accent;
+  $("#glassOn").checked = !!theme.glassOn;
+  $("#glassBlur").value = String(theme.glassBlur||22);
+  $("#glassBlurVal").textContent = (theme.glassBlur||22)+" px";
+  $("#bgIntensity").value = String(Math.round((theme.bgIntensity ?? 0.95)*100));
+  $("#bgIntensityVal").textContent = Math.round((theme.bgIntensity ?? 0.95)*100)+"%";
+}
+function saveTheme(){
+  const theme = {
+    accent: $("#accentColor").value,
+    glassOn: $("#glassOn").checked,
+    glassBlur: Number($("#glassBlur").value||22),
+    bgIntensity: Number($("#bgIntensity").value||95)/100,
+  };
+  ls.set(THEME_KEY, theme);
+  applyTheme(theme);
+  toast("✅ Design gespeichert", "Gilt sofort – bleibt auf diesem Gerät.");
+}
+function resetTheme(){
+  ls.del(THEME_KEY);
+  applyTheme(null);
+  toast("↩︎ Design zurückgesetzt", "Standardwerte wieder aktiv.");
+}
+
+// ---------- Toast ----------
+let toastT=null;
+function toast(title, msg){
+  const box=$("#toast");
+  $("#toastTitle").textContent=title||"";
+  $("#toastMsg").textContent=msg||"";
+  box.classList.remove("hidden");
+  clearTimeout(toastT);
+  toastT=setTimeout(()=>box.classList.add("hidden"), 2400);
+}
+
+// ---------- Firebase connect ----------
+function setFbStatus(ok){
+  state.connected=ok;
+  $("#fbDot").className = "dot " + (ok? "good":"bad");
+  $("#fbText").textContent = ok? "Firebase: verbunden":"Firebase: nicht verbunden";
+}
+async function connectFirebase(){
+  try{
+    state.app = initializeApp(firebaseConfig);
+    state.db  = getFirestore(state.app);
+    setFbStatus(true);
+    attachFirestoreListeners();
+  }catch(err){
+    console.error(err);
+    setFbStatus(false);
+    toast(t("fb_error_title"), t("fb_error_body"));
+  }
+}
+function attachFirestoreListeners(){
+  // Produkte
+  onSnapshot(collection(state.db,"products"), (snap)=>{
+    state.products.clear();
+    snap.forEach(d=>{
+      const v=d.data()||{};
+      state.products.set(d.id, { name: v.name||"(ohne Name)", unit: v.unit||"", code: v.code||d.id, link: v.link||"" });
+    });
+    renderEverywhere();
+  }, (err)=>{ console.error(err); setFbStatus(false); });
+
+  // Meldungen (Reports)
+  const qy = query(collection(state.db,"reports"), orderBy("createdAt","desc"));
+  onSnapshot(qy, (snap)=>{
+    state.reports.clear();
+    snap.forEach(d=> state.reports.set(d.id, d.data()||{}));
+    renderReports();
+    renderWorkerReports();
+  }, (err)=>{ console.error(err); setFbStatus(false); });
+}
+
+// ---------- Admin auth ----------
+const PIN_KEY="nb_admin_pin";
+const SESSION_KEY="nb_admin_session";
+function getPin(){ return ls.get(PIN_KEY, "1234"); }
+function setPin(p){ ls.set(PIN_KEY, String(p)); }
+function restoreSession(){
+  const ses = ls.get(SESSION_KEY, null);
+  if(!ses) return false;
+  if(Date.now() > (ses.exp||0)) { ls.del(SESSION_KEY); return false; }
+  state.adminAuthed=true;
+  return true;
+}
+function persistSession(remember){
+  if(!remember){ ls.del(SESSION_KEY); return; }
+  ls.set(SESSION_KEY, { exp: Date.now() + 1000*60*60*24*14 }); // 14 Tage
+}
+function logoutAdmin(){
+  state.adminAuthed=false;
+  ls.del(SESSION_KEY);
+  setView("home");
+  toast("Abgemeldet", "Admin-Session beendet.");
+}
+
+// ---------- Views ----------
+function setView(v){
+  state.view=v;
+  $$(".view").forEach(x=>x.classList.add("hidden"));
+  $("#view_"+v).classList.remove("hidden");
+  // stop camera if leaving worker
+  if(v!=="worker") stopScanner();
+  if(v==="admin") renderAdminProducts();
+  if(v==="worker") renderWorkerProducts();
+}
+
+function renderEverywhere(){
+  renderWorkerProducts();
+  renderAdminProducts();
+  renderReports();
+  renderWorkerReports();
+}
+
+function renderWorkerProducts(){
+  const sel=$("#workerProduct");
+  if(!sel) return;
+  const cur=sel.value;
+  const items=[...state.products.entries()].map(([id,p])=>({id, name:p.name, unit:p.unit, code:p.code}));
+  items.sort((a,b)=> a.name.localeCompare(b.name,"de"));
+  sel.innerHTML = `<option value="">${escapeHtml(t('choose_product'))}</option>` + items.map(p=>`<option value="${p.id}">${escapeHtml(p.name)}${p.unit? " ("+escapeHtml(p.unit)+")":""}</option>`).join("");
+  if(items.some(p=>p.id===cur)) sel.value=cur;
+}
+
+function renderAdminProducts(){
+  const tb=$("#adminProductsTbody");
+  if(!tb) return;
+  const rows=[...state.products.entries()].map(([id,p])=>({id,...p}));
+  rows.sort((a,b)=> a.name.localeCompare(b.name,"de"));
+  tb.innerHTML = rows.map(p=>`
+    <tr>
+      <td><strong>${escapeHtml(p.name)}</strong>${p.unit? `<div class="mini muted">${escapeHtml(p.unit)}</div>`:""}</td>
+      <td class="mini"><code>${escapeHtml(p.code||p.id)}</code></td>
+      <td>
+        <div class="actions">
+          <button class="btn" data-act="qr" data-id="${p.id}">${escapeHtml(t("show_qr"))}</button>
+          <button class="btn" data-act="copy" data-id="${p.id}">${escapeHtml(t("copy_code"))}</button>
+          <button class="btn" data-act="link" data-id="${p.id}">${escapeHtml(t("open_link"))}</button>
+          <button class="btn danger" data-act="del" data-id="${p.id}">${escapeHtml(t("delete"))}</button>
+        </div>
+      </td>
+    </tr>
+  `).join("") || `<tr><td colspan="3" class="muted">${escapeHtml(t("no_products"))}</td></tr>`;
+}
+
+function renderReports(){
+  const tb=$("#adminReportsTbody");
+  if(!tb) return;
+  const rows=[...state.reports.entries()].map(([id,r])=>({id,...r}));
+  tb.innerHTML = rows.map(r=>{
+    const p = state.products.get(r.productId);
+    const pname = p? p.name : (state.lang==="en" ? "(Product deleted)" : state.lang==="el" ? "(Το προϊόν διαγράφηκε)" : "(Produkt gelöscht)");
+    const when = r.createdAt?.toDate ? r.createdAt.toDate().toLocaleString() : "";
+    const st = r.status || "open";
+    const ordered = r.orderedAt?.toDate ? r.orderedAt.toDate().toLocaleString() : "";
+    const delivered = r.deliveredAt?.toDate ? r.deliveredAt.toDate().toLocaleString() : "";
+    return `
+      <tr>
+        <td><strong>${escapeHtml(pname)}</strong><div class="mini muted">${when}</div></td>
+        <td>${escapeHtml(String(r.qty||""))}</td>
+        <td><span class="badge">${escapeHtml(tStatus(st))}</span><div class="mini muted">${ordered? (t("ordered_at")+": "+ordered):""}</div><div class="mini muted">${delivered? (t("delivered_at")+": "+delivered):""}</div></td>
+        <td>
+          <div class="actions">
+            <button class="btn" data-act="ordered" data-id="${r.id}">${escapeHtml(t("ordered"))}</button>
+            <button class="btn" data-act="delivered" data-id="${r.id}">${escapeHtml(t("delivered"))}</button>
+            <button class="btn danger" data-act="rdel" data-id="${r.id}">${escapeHtml(t("report_delete"))}</button>
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join("") || `<tr><td colspan="4" class="muted">${escapeHtml(t("no_reports"))}</td></tr>`;
+}
+
+function renderWorkerReports(){
+  const tb = $("#workerReportsTbody");
+  if(!tb) return;
+
+  // Show all non-delivered reports (for staff view). Ordered/delivered times are shown.
+  const rows = [...state.reports.entries()].map(([id,r])=>({id,...r}))
+    .filter(r => (r.status||"open").toLowerCase() !== "delivered");
+
+  if(rows.length===0){
+    tb.innerHTML = `<tr><td colspan="4" class="muted">${escapeHtml(t("no_reports"))}</td></tr>`;
+    return;
+  }
+
+  tb.innerHTML = rows.map(r=>{
+    const p = state.products.get(r.productId);
+    const pname = p? p.name : (state.lang==="en" ? "(Product deleted)" : state.lang==="el" ? "(Το προϊόν διαγράφηκε)" : "(Produkt gelöscht)");
+    const st = (r.status||"open").toLowerCase();
+    const whenOrd = r.orderedAt?.toDate ? r.orderedAt.toDate().toLocaleString() : "";
+    const whenDel = r.deliveredAt?.toDate ? r.deliveredAt.toDate().toLocaleString() : "";
+    const statusLine = st==="ordered"
+      ? `${escapeHtml(tStatus(st))}${whenOrd? `<div class="mini muted">${escapeHtml(t("ordered_at"))}: ${escapeHtml(whenOrd)}</div>`:""}`
+      : st==="open"
+        ? `open`
+        : `${escapeHtml(tStatus(st))}${whenDel? `<div class="mini muted">${escapeHtml(t("delivered_at"))}: ${escapeHtml(whenDel)}</div>`:""}`;
+
+    const canDeliver = (st==="ordered"); // Staff can only confirm delivered after admin ordered
+    return `
+      <tr>
+        <td><strong>${escapeHtml(pname)}</strong></td>
+        <td>${escapeHtml(String(r.qty||""))}</td>
+        <td>${statusLine}</td>
+        <td>
+          ${canDeliver ? `<button class="btn primary" data-act="wdel" data-id="${r.id}">${escapeHtml(t("confirm_delivered"))}</button>` : `<span class="mini muted">–</span>`}
+        </td>
+      </tr>
+    `;
+  }).join("");
+}
+
+
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c])); }
+
+// ---------- Firestore writes ----------
+function requireConnected(){
+  if(!state.connected){ toast("Firebase fehlt", "Bitte zuerst verbinden (Status oben rechts)."); return false; }
+  return true;
+}
+async function addProduct(name, unit, code, link){
+  if(!requireConnected()) return;
+  const cleanName=name.trim();
+  const cleanUnit=unit.trim();
+  const cleanCode=(code||"").trim();
+  const cleanLink=(link||"").trim();
+  const finalCode = cleanCode || makeShortCode(cleanName);
+  await addDoc(collection(state.db,"products"), { name: cleanName, unit: cleanUnit, code: finalCode, link: cleanLink, createdAt: serverTimestamp() });
+}
+async function delProduct(id){
+  if(!requireConnected()) return;
+  await deleteDoc(doc(state.db,"products", id));
+}
+async function addReport(productId, qty){
+  if(!requireConnected()) return;
+  await addDoc(collection(state.db,"reports"), { productId, qty, status:"open", createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
+}
+async function setReport(id, status, actor){
+  if(!requireConnected()) return;
+  const patch = { status, updatedAt: serverTimestamp() };
+  const s = (status||"open").toLowerCase();
+  if(s==="ordered"){ patch.orderedAt = serverTimestamp(); patch.orderedBy = actor || "admin"; }
+  if(s==="delivered"){ patch.deliveredAt = serverTimestamp(); patch.deliveredBy = actor || "worker"; }
+  await updateDoc(doc(state.db,"reports",id), patch);
+}
+async function delReport(id){
+  if(!requireConnected()) return;
+  await deleteDoc(doc(state.db,"reports",id));
+}
+
+
+// ---------- QR: generate & scan ----------
+function makeShortCode(name){
+  // Kurzer, gut scanbarer Code: NB-XXXXX
+  const base = (name||"P").toUpperCase().replace(/[^A-Z0-9]/g,"").slice(0,3).padEnd(3,"X");
+  const rnd = Math.random().toString(36).slice(2,7).toUpperCase();
+  return `NB-${base}-${rnd}`;
+}
+function qrDataForProduct(id){
+  const p=state.products.get(id);
+  const code = (p?.code)||id;
+  // Datenformat: NBAPP:<code>
+  return `NBAPP:${code}`;
+}
+async function showQr(id){
+  const p=state.products.get(id);
+  if(!p){ toast("Produkt fehlt", "Nicht gefunden."); return; }
+  const payload = qrDataForProduct(id);
+  const url = "https://api.qrserver.com/v1/create-qr-code/?size=420x420&data="+encodeURIComponent(payload);
+  $("#qrTitle").textContent = `QR für: ${p.name}`;
+  $("#qrHint").textContent = `Code: ${p.code||id}`;
+  $("#qrImg").src = url;
+  $("#qrModal").classList.remove("hidden");
+}
+async function copyCode(id){
+  const p=state.products.get(id);
+  const code = p?.code || id;
+  try{
+    await navigator.clipboard.writeText(code);
+    toast("📋 Kopiert", code);
+  }catch{
+    prompt("Code kopieren:", code);
+  }
+}
+
+async function openProductLink(id){
+  const p = state.products.get(id);
+  const url = p && p.link ? p.link : "";
+  if(!url){ toast("ℹ️", "Kein Bestell‑Link hinterlegt."); return; }
+  try{ window.open(url, "_blank", "noopener,noreferrer"); }
+  catch(e){ location.href = url; }
+}
+
+// Scanner: Html5Qrcode (fallback-fähig)
+async function startScanner(){
+  if(!requireConnected()) return;
+  const boxId="qrReader";
+  $("#scanStatus").textContent = (state.lang==="en" ? "Starting camera…" : state.lang==="el" ? "Εκκίνηση κάμερας…" : "Kamera wird gestartet…");
+  $("#scanArea").classList.remove("hidden");
+  $("#btnScanStart").disabled=true;
+  $("#btnScanStop").disabled=false;
+
+  try{
+    if(!state.html5){
+      state.html5 = new Html5Qrcode(boxId);
+    }
+    const cfg = { fps: 10, qrbox: { width: 260, height: 260 } };
+
+    // 1) Try environment facingMode
+    try{
+      await state.html5.start({ facingMode:"environment" }, cfg, (decodedText)=> onScan(decodedText), ()=>{});
+      $("#scanStatus").textContent = (state.lang==="en" ? "Scanning… hold the QR steady." : state.lang==="el" ? "Σκανάρει… κράτα σταθερό τον κωδικό." : "Scan läuft – halte den QR-Code ruhig ins Bild.");
+      return;
+    }catch(e1){
+      // fall through
+    }
+
+    // 2) Fallback: pick a camera id (prefer back camera names)
+    const cams = await Html5Qrcode.getCameras();
+    if(!cams || cams.length===0) throw new Error("no cameras");
+
+    const pick = (cams.find(c=>/back|rear|environment|rück|hinten/i.test(c.label)) || cams[cams.length-1]);
+    await state.html5.start({ deviceId: { exact: pick.id } }, cfg, (decodedText)=> onScan(decodedText), ()=>{});
+    $("#scanStatus").textContent = (state.lang==="en" ? "Scanning… hold the QR steady." : state.lang==="el" ? "Σκανάρει… κράτα σταθερό τον κωδικό." : "Scan läuft – halte den QR-Code ruhig ins Bild.");
+  }catch(err){
+    console.error(err);
+    $("#scanStatus").textContent = (state.lang==="en" ? "Camera not available. Use manual code input below." : state.lang==="el" ? "Η κάμερα δεν είναι διαθέσιμη. Χρησιμοποίησε τον χειροκίνητο κωδικό." : "Kamera nicht verfügbar. Nutze unten den Code-Eingang.");
+    $("#btnScanStart").disabled=false;
+    $("#btnScanStop").disabled=true;
+  }
+}
+async function stopScanner(){
+  try{
+    if(state.html5 && state.html5.isScanning){
+      await state.html5.stop();
+      await state.html5.clear();
+    }
+  }catch{}
+  $("#btnScanStart")?.setAttribute("aria-busy","false");
+  if($("#scanArea")) $("#scanArea").classList.add("hidden");
+  if($("#btnScanStart")) $("#btnScanStart").disabled=false;
+  if($("#btnScanStop")) $("#btnScanStop").disabled=true;
+  if($("#scanStatus")) $("#scanStatus").textContent="";
+}
+
+function normalizeScanned(txt){
+  const t=(txt||"").trim();
+  if(!t) return "";
+  // Akzeptiere NBAPP:<code> oder rohen Code
+  if(t.toUpperCase().startsWith("NBAPP:")) return t.slice(6).trim();
+  return t;
+}
+function findProductByCode(code){
+  const c = (code||"").trim();
+  if(!c) return null;
+  // 1) match by code field
+  for(const [id,p] of state.products.entries()){
+    if((p.code||"").trim()===c) return {id,p};
+  }
+  // 2) match by document id
+  if(state.products.has(c)) return {id:c, p:state.products.get(c)};
+  // 3) match by name (letzter Notnagel)
+  const low=c.toLowerCase();
+  for(const [id,p] of state.products.entries()){
+    if((p.name||"").toLowerCase()===low) return {id,p};
+  }
+  return null;
+}
+function onScan(decodedText){
+  const code = normalizeScanned(decodedText);
+  const hit = findProductByCode(code);
+  if(!hit){
+    toast("❌ Unbekannter Code", code);
+    $("#scanLast").textContent = "Unbekannt: "+code;
+    return;
+  }
+  $("#scanLast").textContent = "Gefunden: "+hit.p.name+" ("+(hit.p.code||hit.id)+")";
+  $("#workerProduct").value = hit.id;
+  $("#workerQty").focus();
+  toast("✅ Produkt erkannt", hit.p.name);
+  // optional: stop after success
+  stopScanner();
+}
+
+// ---------- Init ----------
+window.addEventListener("DOMContentLoaded", ()=>{
+  applyTheme();
+  initLang();
+
+  // Buttons (Home)
+  $$(".goAdmin").forEach(b=> b.addEventListener("click", ()=>{
+    if(restoreSession()){ setView("admin"); return; }
+    setView("adminLogin");
+    $("#pinInput").focus();
+  }));
+  $$(".goWorker").forEach(b=> b.addEventListener("click", ()=> setView("worker")));
+
+  $("#btnHome").addEventListener("click", ()=> setView("home"));
+
+  // Design
+  $("#btnThemeApply").addEventListener("click", saveTheme);
+  $("#btnThemeReset").addEventListener("click", resetTheme);
+  $("#glassBlur").addEventListener("input", ()=> $("#glassBlurVal").textContent = $("#glassBlur").value+" px");
+  $("#bgIntensity").addEventListener("input", ()=> $("#bgIntensityVal").textContent = $("#bgIntensity").value+"%");
+
+  // Admin login
+  $("#btnPinLogin").addEventListener("click", ()=>{
+    const pin=$("#pinInput").value.trim();
+    if(pin!==getPin()){ toast(t("wrong_pin_title"), t("wrong_pin_body")); return; }
+    state.adminAuthed=true;
+    persistSession($("#rememberAdmin").checked);
+    $("#pinInput").value="";
+    setView("admin");
+  });
+  $("#btnPinCancel").addEventListener("click", ()=> setView("home"));
+
+  // Admin actions
+  $("#btnAdminLogout").addEventListener("click", logoutAdmin);
+
+  $("#btnSaveProduct").addEventListener("click", async()=>{
+    const n=$("#prodName").value.trim();
+    const u=$("#prodUnit").value.trim();
+    const c=$("#prodCode").value.trim();
+    if(!n){ toast("Fehlt", "Bitte Produktname eingeben."); return; }
+    await addProduct(n,u,c,l);
+    $("#prodName").value=""; $("#prodUnit").value=""; $("#prodCode").value=""; $("#prodLink").value="";
+    toast(t("reported_ok_title"), "Produkt wurde gespeichert.");
+  });
+
+  $("#adminProductsTbody").addEventListener("click", async(e)=>{
+    const b=e.target.closest("button"); if(!b) return;
+    const id=b.dataset.id;
+    if(b.dataset.act==="qr") await showQr(id);
+    if(b.dataset.act==="copy") await copyCode(id);
+    if(b.dataset.act==="link") await openProductLink(id);
+    if(b.dataset.act==="del"){
+      if(confirm("Produkt wirklich löschen?")) await delProduct(id);
+    }
+  });
+
+  $("#adminReportsTbody").addEventListener("click", async(e)=>{
+    const b=e.target.closest("button"); if(!b) return;
+    const id=b.dataset.id;
+    if(b.dataset.act==="ordered") await setReport(id,"ordered","admin");
+    if(b.dataset.act==="delivered") await setReport(id,"delivered","admin");
+    if(b.dataset.act==="rdel"){
+      if(confirm("Meldung wirklich löschen?")) await delReport(id);
+    }
+  });
+
+  // Admin settings (PIN)
+  $("#btnChangePin").addEventListener("click", ()=>{
+    const old=$("#pinOld").value.trim();
+    const p1=$("#pinNew").value.trim();
+    const p2=$("#pinNew2").value.trim();
+    if(old!==getPin()){ toast("❌ Alte PIN falsch",""); return; }
+    if(!/^[0-9]{4,8}$/.test(p1)){ toast("PIN ungültig","Bitte 4–8 Ziffern."); return; }
+    if(p1!==p2){ toast("PIN passt nicht","Bitte wiederholen."); return; }
+    setPin(p1);
+    $("#pinOld").value=""; $("#pinNew").value=""; $("#pinNew2").value="";
+    toast("✅ PIN geändert","Beim nächsten Login gilt die neue PIN.");
+  });
+
+  // Worker
+  $("#btnScanStart").addEventListener("click", startScanner);
+  $("#btnScanStop").addEventListener("click", stopScanner);
+
+  $("#btnCodeApply").addEventListener("click", ()=>{
+    const code = $("#manualCode").value.trim();
+    if(!code) return;
+    onScan(code);
+  });
+
+  $("#btnWorkerSend").addEventListener("click", async()=>{
+    const pid=$("#workerProduct").value;
+    const qty=Number($("#workerQty").value||0);
+    if(!pid){ toast("⚠️", state.lang==="en" ? "Please choose (or scan) a product." : state.lang==="el" ? "Παρακαλώ επίλεξε (ή σκάναρε) προϊόν." : "Bitte Produkt wählen (oder scannen)."); return; }
+    if(!qty || qty<1){ toast("⚠️", state.lang==="en" ? "Quantity must be ≥ 1." : state.lang==="el" ? "Η ποσότητα πρέπει να είναι ≥ 1." : "Bitte Menge ≥ 1"); return; }
+    await addReport(pid, qty);
+    $("#workerQty").value="1";
+    toast(t("reported_ok_title"), t("reported_ok_body"));
+  });
+
+  // Worker: confirm delivered (only when admin set ordered) -> disappears from staff list
+  const wtb = $("#workerReportsTbody");
+  if(wtb){
+    wtb.addEventListener("click", async(e)=>{
+      const b = e.target.closest("button"); if(!b) return;
+      if(b.dataset.act==="wdel"){
+        const rid = b.dataset.id;
+        await setReport(rid, "delivered", "worker");
+        // UI will update via snapshot; report disappears here (status=delivered)
+        toast("✅", state.lang==="en" ? "Marked as delivered." : state.lang==="el" ? "Σημειώθηκε ως παραδόθηκε." : "Als geliefert markiert.");
+      }
+    });
+  }
+
+
+  // QR modal
+  $("#qrClose").addEventListener("click", ()=> $("#qrModal").classList.add("hidden"));
+  $("#qrPrint").addEventListener("click", ()=>{
+    const w = window.open("", "_blank");
+    const title = $("#qrTitle").textContent;
+    const hint = $("#qrHint").textContent;
+    const img = $("#qrImg").src;
+    w.document.write(`<title>${title}</title><div style="font-family:system-ui;padding:24px">
+      <h2 style="margin:0 0 8px">${title}</h2>
+      <div style="margin:0 0 10px;color:#444">${hint}</div>
+      <img src="${img}" style="width:320px;height:320px"/>
+      <div style="margin-top:10px;color:#666;font-size:12px">Scan: NBAPP:&lt;Code&gt;</div>
+    </div>`);
+    w.document.close();
+    w.focus();
+    w.print();
+  });
+
+  // initial
+  connectFirebase();
+  setView("home");
+});
+</script>
+</head>
+
+<body>
+<div class="topbar">
+  <div class="row">
+    <div class="brand">
+      <div class="logo"></div>
+      <div>
+        <h1>Nachbestell‑App</h1>
+        <small>Admin & Mitarbeiter in einer App</small>
+      </div>
+    </div>
+    <div class="row">
+      <div class="pill"><span id="fbDot" class="dot bad"></span><span id="fbText">Firebase: nicht verbunden</span></div>
+      <div class="pill" style="padding:6px 10px;">
+        <span class="mini muted" id="lblLang" style="margin-right:8px;">Sprache</span>
+        <select id="langSel" class="sel">
+          <option value="de">DE</option>
+          <option value="en">EN</option>
+          <option value="el">ΕΛ</option>
+        </select>
+      </div>
+      <button id="btnHome" class="btn primary">🏠 Start</button>
+    </div>
+  </div>
+</div>
+
+<div class="wrap">
+  <div class="grid">
+
+    <!-- LEFT -->
+    <div class="card">
+      <h2>Auswahl</h2>
+      <p class="muted">Wähle Admin oder Mitarbeiter. Admin ist per PIN geschützt.</p>
+      <div class="kbtn">
+        <button class="btn primary goWorker">🧑‍🔧 Mitarbeiter</button>
+        <button class="btn goAdmin">Admin</button>
+      </div>
+
+      <div class="hr"></div>
+
+      <h2>Design</h2>
+      <p class="mini muted">Hier stellst du Akzentfarbe & „Liquid Glass“ ein. Änderungen gelten erst nach <strong>Bestätigen</strong>.</p>
+
+      <div class="field">
+        <label class="mini muted">Akzentfarbe</label>
+        <input id="accentColor" type="color" value="#4f86ff" />
+      </div>
+
+      <div class="field">
+        <label class="mini muted"><input id="glassOn" type="checkbox" /> Liquid Glass aktiv</label>
+      </div>
+
+      <div class="sliderRow">
+        <div class="mini muted">Glass‑Stärke</div>
+        <div>
+          <input id="glassBlur" type="range" min="0" max="40" value="22" />
+          <div class="mini muted"><span id="glassBlurVal">22 px</span></div>
+        </div>
+      </div>
+
+      <div class="sliderRow">
+        <div class="mini muted">Hintergrund‑Intensität</div>
+        <div>
+          <input id="bgIntensity" type="range" min="55" max="100" value="95" />
+          <div class="mini muted"><span id="bgIntensityVal">95%</span></div>
+        </div>
+      </div>
+
+      <div class="kbtn">
+        <button id="btnThemeApply" class="btn primary">✅ Bestätigen</button>
+        <button id="btnThemeReset" class="btn">↩︎ Zurücksetzen</button>
+      </div>
+
+      <div class="hr"></div>
+      <div class="mini muted">
+        Tipp: Kamera/Scanner funktioniert am zuverlässigsten über HTTPS (GitHub Pages ist HTTPS).
+      </div>
+    </div>
+
+    <!-- RIGHT / VIEWS -->
+    <div class="card soft">
+
+      <!-- HOME -->
+      <div id="view_home" class="view">
+        <h2>Willkommen</h2>
+        <p class="muted">Diese App verwaltet Nachbestellungen per QR‑Code: Mitarbeiter scannen & melden, Admin sieht alles und kann Produkte verwalten.</p>
+
+        <div class="cols">
+          <div class="card" style="padding:16px; background:rgba(255,255,255,.06); border-color:rgba(255,255,255,.10);">
+            <h2 style="margin:0 0 8px; font-size:16px;">So funktioniert’s</h2>
+            <div class="muted">
+              1) Admin legt Produkte an und zeigt/drukct QR‑Labels.<br/>
+              2) Mitarbeiter scannen QR und melden „leer“ mit Menge.<br/>
+              3) Admin markiert „bestellt“ und „geliefert“.
+            </div>
+          </div>
+
+          <div class="card" style="padding:16px; background:rgba(255,255,255,.06); border-color:rgba(255,255,255,.10);">
+            <h2 style="margin:0 0 8px; font-size:16px;">Start</h2>
+            <div class="kbtn">
+              <button class="btn primary goWorker">🧑‍🔧 Mitarbeiter</button>
+              <button class="btn goAdmin">Admin</button>
+            </div>
+            <div class="mini muted" style="margin-top:10px;">
+              Admin fragt nach PIN (Standard: <code>1234</code>).
+            </div>
+          </div>
+        </div>
+
+        <div class="hr"></div>
+        <div class="mini muted">
+          Status oben rechts muss <strong>Firebase: verbunden</strong> zeigen. Dann bleiben Produkte & Meldungen nach Reload erhalten.
+        </div>
+      </div>
+
+      <!-- ADMIN LOGIN -->
+      <div id="view_adminLogin" class="view hidden">
+        <h2>Admin‑Login</h2>
+        <p class="muted">Bitte PIN eingeben.</p>
+        <div class="field">
+          <label class="mini muted">PIN</label>
+          <input id="pinInput" type="password" inputmode="numeric" autocomplete="one-time-code" placeholder="z.B. 1234" />
+        </div>
+        <label class="mini muted"><input id="rememberAdmin" type="checkbox" checked /> Eingeloggt bleiben</label>
+        <div class="kbtn" style="margin-top:12px;">
+          <button id="btnPinLogin" class="btn primary">Login</button>
+          <button id="btnPinCancel" class="btn">Abbrechen</button>
+        </div>
+      </div>
+
+      <!-- ADMIN -->
+      <div id="view_admin" class="view hidden">
+        <div class="row" style="margin-bottom:10px;">
+          <h2 style="margin:0;">Admin</h2>
+          <button id="btnAdminLogout" class="btn">Abmelden</button>
+        </div>
+
+        <div class="card" style="padding:16px; background:rgba(255,255,255,.06); border-color:rgba(255,255,255,.10);">
+          <h2 style="margin:0 0 8px; font-size:16px;">Produkt anlegen</h2>
+          <div class="cols">
+            <div class="field">
+              <label class="mini muted">Name</label>
+              <input id="prodName" placeholder="z.B. Milch" />
+            </div>
+            <div class="field">
+              <label class="mini muted">Einheit (optional)</label>
+              <input id="prodUnit" placeholder="z.B. 1L / Packung" />
+            </div>
+          </div>
+          <div class="field">
+            <label class="mini muted">QR‑Code (optional) – leer lassen → wird automatisch erzeugt</label>
+            <input id="prodCode" placeholder="z.B. MILCH-01" />
+          
+          <div class="field">
+            <label class="mini muted">Bestell‑Link (optional)</label>
+            <input id="prodLink" placeholder="z.B. https://… (Shop / Lieferant)" />
+          </div>
+</div>
+          <div class="kbtn">
+            <button id="btnSaveProduct" class="btn primary">✅ Speichern</button>
+          </div>
+          <div class="mini muted" style="margin-top:10px;">Der QR enthält <code>NBAPP:&lt;Code&gt;</code>. Der Scanner erkennt den Code.</div>
+        </div>
+
+        <div class="hr"></div>
+
+        <h2>Produkte</h2>
+        <table class="table">
+          <thead><tr><th>Produkt</th><th>Code</th><th>Aktionen</th></tr></thead>
+          <tbody id="adminProductsTbody"></tbody>
+        </table>
+
+        <div class="hr"></div>
+
+        <h2>Meldungen</h2>
+        <table class="table">
+          <thead><tr><th>Produkt</th><th>Menge</th><th>Status</th><th>Aktionen</th></tr></thead>
+          <tbody id="adminReportsTbody"></tbody>
+        </table>
+
+        <div class="hr"></div>
+
+        <h2>Admin‑Einstellungen</h2>
+        <div class="cols">
+          <div class="field">
+            <label class="mini muted">Alte PIN</label>
+            <input id="pinOld" type="password" inputmode="numeric" />
+          </div>
+          <div class="field">
+            <label class="mini muted">Neue PIN</label>
+            <input id="pinNew" type="password" inputmode="numeric" placeholder="4–8 Ziffern" />
+          </div>
+        </div>
+        <div class="field">
+          <label class="mini muted">Neue PIN wiederholen</label>
+          <input id="pinNew2" type="password" inputmode="numeric" />
+        </div>
+        <div class="kbtn">
+          <button id="btnChangePin" class="btn primary">PIN ändern</button>
+        </div>
+      </div>
+
+      <!-- WORKER -->
+      <div id="view_worker" class="view hidden">
+        <h2>Mitarbeiter</h2>
+        <p class="muted">Scanne den QR‑Code (Kamera) oder wähle das Produkt manuell und melde die Menge.</p>
+
+        <div class="card" style="padding:16px; background:rgba(255,255,255,.06); border-color:rgba(255,255,255,.10);">
+          <div class="row" style="align-items:flex-start;">
+            <div>
+              <div class="tag">📷 Kamera‑Scan</div>
+              <div id="scanStatus" class="mini muted" style="margin-top:8px;"></div>
+              <div id="scanLast" class="mini muted" style="margin-top:6px;"></div>
+            </div>
+            <div class="kbtn">
+              <button id="btnScanStart" class="btn primary">Scan starten</button>
+              <button id="btnScanStop" class="btn" disabled>Stop</button>
+            </div>
+          </div>
+
+          <div id="scanArea" class="hidden" style="margin-top:12px;">
+            <div id="qrReader" style="width:100%; max-width:520px;"></div>
+            <div class="mini muted" style="margin-top:8px;">Wenn Safari die Kamera blockt: unten Code manuell eingeben.</div>
+          </div>
+
+          <div class="hr"></div>
+
+          <div class="cols">
+            <div class="field">
+              <label class="mini muted">Manueller Code (falls kein Kamera‑Scan möglich)</label>
+              <input id="manualCode" placeholder="z.B. NB-XXX-ABCDE oder MILCH-01" />
+            </div>
+            <div class="field" style="align-self:end;">
+              <button id="btnCodeApply" class="btn">Code prüfen</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="hr"></div>
+
+        <div class="cols">
+          <div class="field">
+            <label class="mini muted">Produkt</label>
+            <select id="workerProduct"></select>
+          </div>
+          <div class="field">
+            <label class="mini muted">Menge</label>
+            <input id="workerQty" type="number" min="1" value="1" />
+          </div>
+        </div>
+        <div class="kbtn">
+          <button id="btnWorkerSend" class="btn primary">✅ Leer melden</button>
+          <button class="btn" onclick="history.back()">Zurück</button>
+        </div>
+
+        
+        <div class="hr"></div>
+
+        <h2 style="margin:0 0 8px; font-size:16px;" id="workerReportsTitle">Aktuelle Meldungen</h2>
+        <p class="mini muted" id="workerReportsHint">Du siehst den Status. „Bestellt“ setzt nur Admin. Du kannst „Geliefert“ bestätigen – dann verschwindet die Meldung hier.</p>
+
+        <div class="card" style="padding:12px; background:rgba(255,255,255,.06); border-color:rgba(255,255,255,.10);">
+          <table class="table">
+            <thead>
+              <tr>
+                <th id="thWProd">Produkt</th>
+                <th id="thWQty">Menge</th>
+                <th id="thWStatus">Status</th>
+                <th id="thWAction">Aktion</th>
+              </tr>
+            </thead>
+            <tbody id="workerReportsTbody">
+              <tr><td colspan="4" class="muted" id="workerReportsEmpty">${escapeHtml(t("no_reports"))}</td></tr>
+            </tbody>
+          </table>
+        </div>
+<div class="hr"></div>
+        <div class="mini muted">
+          Hinweis: Wenn der QR‑Code extern erzeugt wird, muss sein Inhalt dem Code entsprechen (z.B. <code>MILCH-01</code> oder <code>NBAPP:MILCH-01</code>).
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- QR MODAL -->
+<div id="qrModal" class="modal hidden">
+  <div class="box">
+    <div class="top">
+      <div>
+        <div id="qrTitle" style="font-weight:700">QR</div>
+        <div id="qrHint" class="mini muted"></div>
+      </div>
+      <div class="kbtn">
+        <button id="qrPrint" class="btn">Drucken</button>
+        <button id="qrClose" class="btn">Schließen</button>
+      </div>
+    </div>
+    <img id="qrImg" alt="QR Code" />
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast" class="modal hidden" style="align-items:flex-end; justify-content:center; background: transparent; pointer-events:none">
+  <div class="box" style="width:min(520px, 96vw); pointer-events:auto;">
+    <div id="toastTitle" style="font-weight:700"></div>
+    <div id="toastMsg" class="muted" style="margin-top:6px;"></div>
+  </div>
+</div>
+
+</body>
+</html>
